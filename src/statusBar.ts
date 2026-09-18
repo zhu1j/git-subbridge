@@ -82,40 +82,40 @@ export class StatusBar {
 
             this.conflictEl = this.statusBarEl.createDiv();
             this.conflictEl.setAttribute("data-tooltip-position", "top");
-            this.conflictEl.style.float = "left";
+            this.conflictEl.addClass(this.base + "left");
 
             this.pausedEl = this.statusBarEl.createDiv();
             this.pausedEl.setAttribute("data-tooltip-position", "top");
-            this.pausedEl.style.float = "left";
+            this.pausedEl.addClass(this.base + "left");
 
             this.iconEl = this.statusBarEl.createDiv();
-            this.iconEl.style.float = "left";
+            this.iconEl.addClass(this.base + "left");
 
             this.textEl = this.statusBarEl.createDiv();
-            this.textEl.style.float = "right";
-            this.textEl.style.marginLeft = "5px";
+            this.textEl.addClass(this.base + "right");
+            this.textEl.addClass(this.base + "margin-left");
         }
 
         if (this.plugin.localStorage.getConflict()) {
             setIcon(this.conflictEl, "alert-circle");
             this.conflictEl.ariaLabel =
                 "You have merge conflicts. Resolve them and commit afterwards.";
-            this.conflictEl.style.marginRight = "5px";
+            this.conflictEl.addClass(this.base + "margin-right");
             this.conflictEl.addClass(this.base + "conflict");
         } else {
             this.conflictEl.empty();
-            this.conflictEl.style.marginRight = "";
+            this.conflictEl.removeClass(this.base + "margin-right");
         }
 
         if (this.plugin.localStorage.getPausedAutomatics()) {
             setIcon(this.pausedEl, "pause-circle");
             this.pausedEl.ariaLabel =
                 "Automatic routines are currently paused.";
-            this.pausedEl.style.marginRight = "5px";
+            this.pausedEl.addClass(this.base + "margin-right");
             this.pausedEl.addClass(this.base + "paused");
         } else {
             this.pausedEl.empty();
-            this.pausedEl.style.marginRight = "";
+            this.pausedEl.removeClass(this.base + "margin-right");
         }
 
         if (this.progress) {

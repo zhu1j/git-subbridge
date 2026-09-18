@@ -703,3 +703,27 @@ div:hover > .git-gutter-marker.git-changedelete {
 .git-changes-status-bar .git-change {
     margin-right: 0.3em;
 }
+
+.obsidian-git-statusbar-left {
+    float: left;
+}
+
+.obsidian-git-statusbar-right {
+    float: right;
+}
+
+.obsidian-git-statusbar-margin-left {
+    margin-left: 5px;
+}
+
+.obsidian-git-statusbar-margin-right {
+    margin-right: 5px;
+}
+
+.git-line-author-gutter-margin-unset {
+    margin-left: unset !important;
+}
+
+.git-show-password-clear-button {
+    margin-right: 32px;
+}
