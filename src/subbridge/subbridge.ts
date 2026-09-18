@@ -7,10 +7,12 @@ import type ObsidianGit from "../main";
 
 const GIT_MARKER = ".git";
 const METADATA_MARKER = ".git_metadata";
+const DISABLED_HEAD = "HEAD__subbridge";
+const TEMP_METADATA_SUFFIX = ".tmp";
 const JOURNAL_FILE = "subbridge-state.json";
-const RENAME_RETRIES = 5;
-const RENAME_RETRY_DELAY_MS = 120;
-const INDEX_BATCH_SIZE = 100;
+const RENAME_RETRIES = 20;
+const RENAME_RETRY_BASE_DELAY_MS = 150;
+const METADATA_IGNORE_LINE = ".git_metadata/";
 
 export type SubGitMarkerState = "git" | "metadata" | "both";
 
@@ -27,9 +29,17 @@ interface SubGitJournal {
     entries: Array<{ relativeRoot: string }>;
 }
 
+/**
+ * Windows cannot reliably rename a `.git` directory while ChatGPT or another
+ * process has open handles inside it. Instead, this bridge temporarily
+ * invalidates the repository by renaming only `.git/HEAD`, then copies the
+ * complete `.git` directory to a normal `.git_metadata` sidecar directory.
+ * The parent repository can therefore track both project files and metadata
+ * without ever renaming the live `.git` directory itself.
+ */
 export class SubGitBridge {
     private transactionDepth = 0;
-    private movedEntries: SubGitEntry[] = [];
+    private disabledEntries: SubGitEntry[] = [];
     private scanInFlight: Promise<SubGitEntry[]> | undefined;
 
     constructor(public readonly plugin: ObsidianGit) {}
@@ -49,48 +59,36 @@ export class SubGitBridge {
     }
 
     async recover(): Promise<void> {
-        if (!Platform.isDesktopApp || !this.plugin.gitReady) return;
+        if (!Platform.isDesktopApp) return;
 
         const journal = await this.readJournal();
         if (journal) {
             for (const item of journal.entries) {
                 const root = path.join(this.repoRoot, item.relativeRoot);
-                const gitPath = path.join(root, GIT_MARKER);
-                const metadataPath = path.join(root, METADATA_MARKER);
-                const hasGit = await this.exists(gitPath);
-                const hasMetadata = await this.exists(metadataPath);
-
-                if (hasMetadata && !hasGit) {
-                    await this.renameWithRetry(metadataPath, gitPath);
-                } else if (hasMetadata && hasGit) {
-                    throw new Error(
-                        `Cannot recover sub-git bridge because both .git and .git_metadata exist at ${root}`
-                    );
-                }
+                await this.restoreDisabledRepository(root);
             }
             await this.deleteJournal();
         }
 
         const entries = await this.scan();
-        const metadataOnly = entries.filter(
-            (entry) => entry.state === "metadata"
-        );
-        for (const entry of metadataOnly) {
-            await this.renameWithRetry(entry.metadataPath, entry.gitPath);
-            await this.setSkipWorktree(entry);
+        let recovered = 0;
+        for (const entry of entries) {
+            if (entry.state === "metadata") {
+                await this.materializeMetadata(entry);
+                recovered++;
+            } else if (entry.state === "both") {
+                await this.restoreDisabledRepository(entry.root);
+            }
         }
 
-        if (metadataOnly.length > 0) {
+        if (recovered > 0) {
             this.plugin.app.workspace.trigger("obsidian-git:refresh");
         }
     }
 
     async run<T>(operation: () => Promise<T>): Promise<T> {
         if (!Platform.isDesktopApp) return operation();
-
-        if (this.transactionDepth > 0) {
-            return operation();
-        }
+        if (this.transactionDepth > 0) return operation();
 
         this.transactionDepth = 1;
         try {
@@ -106,39 +104,32 @@ export class SubGitBridge {
     }
 
     private async prepare(): Promise<void> {
-        await this.restoreMetadataOnlyEntries();
+        await this.recoverMetadataOnlyEntries();
 
         const entries = await this.scan();
-        const conflicts = entries.filter((entry) => entry.state === "both");
-        if (conflicts.length > 0) {
-            throw new Error(
-                `Both .git and .git_metadata exist in: ${conflicts
-                    .map((entry) => entry.relativeRoot)
-                    .join(", ")}`
-            );
-        }
+        this.disabledEntries = [];
 
-        this.movedEntries = [];
         try {
             for (const entry of entries) {
-                if (entry.state !== "git") continue;
+                if (entry.state === "metadata") continue;
 
                 await this.assertNoGitLocks(entry);
-                await this.renameWithRetry(entry.gitPath, entry.metadataPath);
-                this.movedEntries.push(entry);
-                await this.clearSkipWorktree(entry);
+                await this.ensureMetadataIgnored(entry);
+                await this.disableRepository(entry);
+                this.disabledEntries.push(entry);
+                await this.rebuildMetadataSidecar(entry);
             }
 
-            if (this.movedEntries.length > 0) {
+            if (this.disabledEntries.length > 0) {
                 await this.writeJournal({
                     startedAt: new Date().toISOString(),
-                    entries: this.movedEntries.map((entry) => ({
+                    entries: this.disabledEntries.map((entry) => ({
                         relativeRoot: entry.relativeRoot,
                     })),
                 });
                 new Notice(
-                    `Sub-git bridge prepared ${this.movedEntries.length} child Git ${
-                        this.movedEntries.length === 1
+                    `Sub-git bridge prepared ${this.disabledEntries.length} child Git ${
+                        this.disabledEntries.length === 1
                             ? "repository"
                             : "repositories"
                     }.`,
@@ -147,55 +138,142 @@ export class SubGitBridge {
             }
         } catch (error) {
             await this.restore();
-            throw error;
+            throw new Error(
+                `Sub-git bridge could not prepare child repositories. Close ChatGPT/Codex or any Git process using the child .git folder, then retry. ${String(
+                    error
+                )}`
+            );
         }
     }
 
     private async restore(): Promise<void> {
-        if (this.movedEntries.length === 0) {
+        for (const entry of this.disabledEntries) {
+            await this.restoreDisabledRepository(entry.root);
+        }
+
+        if (this.disabledEntries.length > 0) {
             await this.deleteJournal();
-            return;
+            new Notice(
+                `Sub-git bridge restored ${this.disabledEntries.length} child Git ${
+                    this.disabledEntries.length === 1
+                        ? "repository"
+                        : "repositories"
+                }.`,
+                3000
+            );
+            this.disabledEntries = [];
+            this.plugin.app.workspace.trigger("obsidian-git:refresh");
+        } else {
+            await this.deleteJournal();
         }
-
-        for (const entry of this.movedEntries) {
-            const hasGit = await this.exists(entry.gitPath);
-            const hasMetadata = await this.exists(entry.metadataPath);
-
-            if (hasMetadata && !hasGit) {
-                await this.renameWithRetry(entry.metadataPath, entry.gitPath);
-            } else if (hasMetadata && hasGit) {
-                throw new Error(
-                    `Cannot restore sub-git bridge because both .git and .git_metadata exist at ${entry.root}`
-                );
-            }
-        }
-
-        for (const entry of this.movedEntries) {
-            await this.setSkipWorktree(entry);
-        }
-
-        await this.deleteJournal();
-        new Notice(
-            `Sub-git bridge restored ${this.movedEntries.length} child Git ${
-                this.movedEntries.length === 1 ? "repository" : "repositories"
-            }.`,
-            3000
-        );
-        this.movedEntries = [];
-        this.plugin.app.workspace.trigger("obsidian-git:refresh");
     }
 
-    private async restoreMetadataOnlyEntries(): Promise<void> {
+    private async recoverMetadataOnlyEntries(): Promise<void> {
         const entries = await this.scan();
         for (const entry of entries) {
-            if (entry.state !== "metadata") continue;
-            await this.renameWithRetry(entry.metadataPath, entry.gitPath);
-            await this.setSkipWorktree(entry);
+            if (entry.state === "metadata") {
+                await this.materializeMetadata(entry);
+            }
+        }
+    }
+
+    private async disableRepository(entry: SubGitEntry): Promise<void> {
+        const headPath = path.join(entry.gitPath, "HEAD");
+        const disabledHeadPath = path.join(entry.gitPath, DISABLED_HEAD);
+        const hasHead = await this.exists(headPath);
+        const hasDisabledHead = await this.exists(disabledHeadPath);
+
+        if (hasDisabledHead && !hasHead) return;
+        if (hasDisabledHead && hasHead) {
+            throw new Error(
+                `Both HEAD and ${DISABLED_HEAD} exist in ${entry.relativeRoot}`
+            );
+        }
+        if (!hasHead) {
+            throw new Error(`HEAD is missing in ${entry.relativeRoot}`);
+        }
+
+        await this.renameWithRetry(headPath, disabledHeadPath);
+    }
+
+    private async restoreDisabledRepository(root: string): Promise<void> {
+        const gitPath = path.join(root, GIT_MARKER);
+        const headPath = path.join(gitPath, "HEAD");
+        const disabledHeadPath = path.join(gitPath, DISABLED_HEAD);
+        const hasHead = await this.exists(headPath);
+        const hasDisabledHead = await this.exists(disabledHeadPath);
+
+        if (hasDisabledHead && !hasHead) {
+            await this.renameWithRetry(disabledHeadPath, headPath);
+        } else if (hasDisabledHead && hasHead) {
+            throw new Error(`Both HEAD and ${DISABLED_HEAD} exist in ${root}`);
+        }
+    }
+
+    private async rebuildMetadataSidecar(entry: SubGitEntry): Promise<void> {
+        const tempPath = `${entry.metadataPath}${TEMP_METADATA_SUFFIX}`;
+        await fs.rm(tempPath, { recursive: true, force: true });
+
+        await fs.cp(entry.gitPath, tempPath, {
+            recursive: true,
+            force: true,
+            errorOnExist: false,
+            filter: (source) => {
+                const name = path.basename(source);
+                return name !== "index.lock" && name !== "HEAD.lock";
+            },
+        });
+
+        const copiedDisabledHead = path.join(tempPath, DISABLED_HEAD);
+        const copiedHead = path.join(tempPath, "HEAD");
+        if (await this.exists(copiedDisabledHead)) {
+            await this.renameWithRetry(copiedDisabledHead, copiedHead);
+        }
+
+        await fs.rm(entry.metadataPath, { recursive: true, force: true });
+        await this.renameWithRetry(tempPath, entry.metadataPath);
+    }
+
+    private async materializeMetadata(entry: SubGitEntry): Promise<void> {
+        if (await this.isDirectory(entry.gitPath)) return;
+
+        const tempPath = `${entry.gitPath}${TEMP_METADATA_SUFFIX}`;
+        await fs.rm(tempPath, { recursive: true, force: true });
+        await fs.cp(entry.metadataPath, tempPath, {
+            recursive: true,
+            force: true,
+            errorOnExist: false,
+        });
+        await this.renameWithRetry(tempPath, entry.gitPath);
+        await this.ensureMetadataIgnored(entry);
+    }
+
+    private async ensureMetadataIgnored(entry: SubGitEntry): Promise<void> {
+        const infoPath = path.join(entry.gitPath, "info");
+        const excludePath = path.join(infoPath, "exclude");
+        await fs.mkdir(infoPath, { recursive: true });
+
+        let content = "";
+        try {
+            content = await fs.readFile(excludePath, "utf8");
+        } catch {
+            // Create a new exclude file below.
+        }
+
+        const lines = content.split(/\r?\n/);
+        if (!lines.includes(METADATA_IGNORE_LINE)) {
+            const separator =
+                content.length > 0 && !content.endsWith("\n") ? "\n" : "";
+            await fs.writeFile(
+                excludePath,
+                `${content}${separator}${METADATA_IGNORE_LINE}\n`,
+                "utf8"
+            );
         }
     }
 
     private async scanInternal(): Promise<SubGitEntry[]> {
-        if (!this.plugin.gitReady && !this.plugin.gitManager) return [];
+        if (!this.plugin.gitManager) return [];
 
         const root = this.repoRoot;
         const visited = new Set<string>();
@@ -220,8 +298,8 @@ export class SubGitBridge {
 
             const gitPath = path.join(directory, GIT_MARKER);
             const metadataPath = path.join(directory, METADATA_MARKER);
-            const hasGit = await this.exists(gitPath);
-            const hasMetadata = await this.exists(metadataPath);
+            const hasGit = await this.isDirectory(gitPath);
+            const hasMetadata = await this.isDirectory(metadataPath);
             if (hasGit || hasMetadata) {
                 entries.push({
                     root: directory,
@@ -339,8 +417,12 @@ export class SubGitBridge {
                 return;
             } catch (error) {
                 lastError = error;
+                const delay = Math.min(
+                    RENAME_RETRY_BASE_DELAY_MS * 2 ** attempt,
+                    2000
+                );
                 await new Promise((resolve) =>
-                    window.setTimeout(resolve, RENAME_RETRY_DELAY_MS)
+                    window.setTimeout(resolve, delay)
                 );
             }
         }
@@ -348,36 +430,6 @@ export class SubGitBridge {
         throw new Error(
             `Failed to rename ${source} to ${destination}: ${String(lastError)}`
         );
-    }
-
-    private async listTrackedMetadataPaths(
-        entry: SubGitEntry
-    ): Promise<string[]> {
-        const manager = this.plugin.gitManager as SimpleGit;
-        const pattern = `${entry.relativeRoot}/${METADATA_MARKER}`;
-        const output = await manager.git.raw(["ls-files", "-z", "--", pattern]);
-        return output.split("\0").filter((item) => item.length > 0);
-    }
-
-    private async clearSkipWorktree(entry: SubGitEntry): Promise<void> {
-        await this.updateIndexFlags("--no-skip-worktree", entry);
-    }
-
-    private async setSkipWorktree(entry: SubGitEntry): Promise<void> {
-        await this.updateIndexFlags("--skip-worktree", entry);
-    }
-
-    private async updateIndexFlags(
-        flag: "--skip-worktree" | "--no-skip-worktree",
-        entry: SubGitEntry
-    ): Promise<void> {
-        const paths = await this.listTrackedMetadataPaths(entry);
-        const manager = this.plugin.gitManager as SimpleGit;
-
-        for (let index = 0; index < paths.length; index += INDEX_BATCH_SIZE) {
-            const batch = paths.slice(index, index + INDEX_BATCH_SIZE);
-            await manager.git.raw(["update-index", flag, "--", ...batch]);
-        }
     }
 
     private hashRepoRoot(value: string): string {
@@ -395,7 +447,6 @@ export class SubGitBridge {
 
     private get journalPath(): string {
         const repoHash = this.hashRepoRoot(this.repoRoot);
-
         return path.join(
             os.tmpdir(),
             "git-subbridge",
@@ -417,7 +468,6 @@ export class SubGitBridge {
 
     private async writeJournal(journal: SubGitJournal): Promise<void> {
         const journalPath = this.journalPath;
-        if (!journalPath) return;
         await fs.mkdir(path.dirname(journalPath), { recursive: true });
         await fs.writeFile(
             journalPath,
@@ -428,7 +478,6 @@ export class SubGitBridge {
 
     private async deleteJournal(): Promise<void> {
         const journalPath = this.journalPath;
-        if (!journalPath) return;
         try {
             await fs.unlink(journalPath);
         } catch {

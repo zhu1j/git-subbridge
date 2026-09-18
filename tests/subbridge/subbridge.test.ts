@@ -64,7 +64,7 @@ describe("SubGitBridge", () => {
             ).toContain("project/.git_metadata/config");
             expect((await parentGit.status()).isClean()).toBe(true);
             expect((await childGit.status()).isClean()).toBe(true);
-            expect((await bridge.scan())[0]?.state).toBe("git");
+            expect((await bridge.scan())[0]?.state).toBe("both");
         } finally {
             rmSync(dir, { recursive: true, force: true });
         }

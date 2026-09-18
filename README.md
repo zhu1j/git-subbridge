@@ -8,21 +8,21 @@ A customized Git plugin for Obsidian that solves the problem of uploading or com
 
 -   Adds a **Sub-git scan** button to the Source Control toolbar, immediately to the left of **Commit-and-sync**.
 -   Scans the repository for child folders containing `.git`.
--   Reports live `.git` folders, existing `.git_metadata` folders, and conflicts in a notice.
--   Temporarily renames child `.git` folders to `.git_metadata` before **Commit all** and **Commit-and-sync**.
--   Restores every child `.git` folder in a `finally` block after the Git operation.
--   Uses `skip-worktree` so the restored working tree remains clean.
+-   Reports live `.git`, metadata-only `.git_metadata`, and synchronized repositories in a notice.
+-   Temporarily renames only `.git/HEAD` before **Commit all** and **Commit-and-sync**.
+-   Copies the complete `.git` directory to a normal `.git_metadata` sidecar directory.
+-   Restores `.git/HEAD` in a `finally` block after the Git operation.
+-   Keeps `.git_metadata` as a normal tracked sidecar so parent-repository status remains clean.
 -   Writes a recovery journal so interrupted operations can be restored on the next startup.
--   Refuses to overwrite a project that contains both `.git` and `.git_metadata`.
 
 ## How it works
 
 ```text
 Scan child .git
-    -> rename .git to .git_metadata
+    -> rename .git/HEAD to HEAD__subbridge
+    -> copy .git to .git_metadata
     -> stage and commit with Obsidian Git
-    -> restore .git_metadata to .git
-    -> apply skip-worktree flags
+    -> restore .git/HEAD
 ```
 
 The bridge currently covers the `Commit all` path used by **Commit all** and the default **Commit-and-sync** action. Staged-only commits are not automatically bridged.
@@ -54,7 +54,7 @@ Then enable **Git Subbridge** in Obsidian. Disable the original **Git** plugin w
 -   This plugin is desktop-only and currently intended for Windows.
 -   Do not run Git commands inside a child repository while it is being bridged.
 -   Keep enough free disk space for Git index metadata and recovery operations.
--   If both `.git` and `.git_metadata` exist at the same project root, resolve the conflict manually before committing.
+-   Do not run Git commands inside a child repository while Commit-and-sync is preparing or restoring it.
 
 ## Author
 

@@ -8,21 +8,21 @@
 
 -   在源代码管理工具栏中增加 **子 Git 扫描** 按钮，位置就在 **Commit-and-sync** 左侧。
 -   扫描仓库中包含 `.git` 的子文件夹。
--   通过通知显示实时 `.git`、已有 `.git_metadata` 和冲突数量。
--   执行 **Commit all** 或 **Commit-and-sync** 前，临时将子 `.git` 改名为 `.git_metadata`。
--   Git 操作结束后，在 `finally` 中恢复所有子 `.git` 文件夹。
--   使用 `skip-worktree`，保证恢复后的工作区保持干净。
+-   通过通知显示实时 `.git`、仅元数据 `.git_metadata` 和已同步的仓库。
+-   执行 **Commit all** 或 **Commit-and-sync** 前，只临时改名 `.git/HEAD`。
+-   将完整的 `.git` 目录复制为普通目录 `.git_metadata`。
+-   Git 操作结束后，在 `finally` 中恢复 `.git/HEAD`。
+-   `.git_metadata` 会作为普通旁路目录保留，确保父仓库状态干净。
 -   写入恢复日志，插件启动时可以恢复中断的桥接操作。
--   如果同一项目根目录同时存在 `.git` 和 `.git_metadata`，插件不会自动覆盖，而是报告冲突。
 
 ## 工作流程
 
 ```text
 扫描子 .git
-    -> 将 .git 改名为 .git_metadata
+    -> 将 .git/HEAD 改名为 HEAD__subbridge
+    -> 将 .git 复制为 .git_metadata
     -> 使用 Obsidian Git 暂存并提交
-    -> 将 .git_metadata 恢复为 .git
-    -> 设置 skip-worktree 标记
+    -> 恢复 .git/HEAD
 ```
 
 当前自动桥接覆盖 `Commit all` 路径，也就是 **Commit all** 和默认的 **Commit-and-sync** 操作。仅提交已暂存内容的 `Commit staged` 暂不自动桥接。
@@ -54,7 +54,7 @@ pnpm run build
 -   本插件仅支持桌面端，目前主要面向 Windows。
 -   子仓库处于桥接状态时，不要在其中执行 Git 命令。
 -   请为 Git 索引元数据和恢复操作保留足够的磁盘空间。
--   如果同一个项目根目录下同时存在 `.git` 和 `.git_metadata`，请先手动处理冲突再提交。
+-   子仓库正在准备或恢复时，不要在其中执行 Git 命令。
 
 ## 作者
 

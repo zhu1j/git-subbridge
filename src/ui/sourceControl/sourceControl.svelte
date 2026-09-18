@@ -132,8 +132,8 @@
             const metadata = entries.filter(
                 (entry) => entry.state === "metadata"
             );
-            const conflicts = entries.filter((entry) => entry.state === "both");
-            subGitCount = live.length + metadata.length;
+            const synced = entries.filter((entry) => entry.state === "both");
+            subGitCount = live.length + metadata.length + synced.length;
 
             if (entries.length === 0) {
                 new Notice("No child .git folders found in this repository.");
@@ -145,9 +145,7 @@
                 metadata.length > 0
                     ? `${metadata.length} .git_metadata`
                     : undefined,
-                conflicts.length > 0
-                    ? `${conflicts.length} conflict`
-                    : undefined,
+                synced.length > 0 ? `${synced.length} synced` : undefined,
             ]
                 .filter((value): value is string => value !== undefined)
                 .join(", ");
