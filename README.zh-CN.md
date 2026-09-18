@@ -28,6 +28,8 @@
 
 当前自动桥接覆盖 `Commit all` 路径，也就是 **Commit all** 和默认的 **Commit-and-sync** 操作。仅提交已暂存内容的 `Commit staged` 暂不自动桥接。
 
+详细对比见 [元数据模式说明](docs/metadata-modes.md#简体中文)。
+
 ## 构建与安装
 
 ```powershell

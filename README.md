@@ -28,6 +28,8 @@ Scan child .git
 
 The bridge currently covers the `Commit all` path used by **Commit all** and the default **Commit-and-sync** action. Staged-only commits are not automatically bridged.
 
+For a detailed comparison, see [Metadata modes](docs/metadata-modes.md#english).
+
 ## Build and install
 
 ```powershell
