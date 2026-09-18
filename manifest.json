@@ -1,0 +1,10 @@
+{
+    "id": "git-subbridge",
+    "name": "Git Subbridge",
+    "version": "1.0.0",
+    "minAppVersion": "1.5.0",
+    "description": "Adds a custom Git bridge for committing nested repositories in an Obsidian vault.",
+    "author": "一只朱",
+    "authorUrl": "https://github.com/zhu1j",
+    "isDesktopOnly": true
+}
