@@ -532,6 +532,12 @@ export default class ObsidianGit extends Plugin {
             data = <ObsidianGitSettings>{ showedMobileNotice: true };
         }
         this.settings = mergeSettingsByPriority(DEFAULT_SETTINGS, data);
+        const legacySettings = data as ObsidianGitSettings & {
+            subGitBridgeBilingual?: boolean;
+        };
+        if (legacySettings.subGitBridgeBilingual) {
+            this.settings.subGitBridgeLanguage = "zh";
+        }
     }
 
     async saveSettings() {

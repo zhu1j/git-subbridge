@@ -31,6 +31,7 @@ import type {
     SyncMethod,
 } from "src/types";
 import { convertToRgb, formatMinutes, rgbToString } from "src/utils";
+import { translateSettingsDom } from "./settingsZh";
 
 const FORMAT_STRING_REFERENCE_URL =
     "https://momentjs.com/docs/#/parsing/string-format/";
@@ -79,7 +80,7 @@ export class ObsidianGitSettingsTab extends PluginSettingTab {
             new Setting(containerEl)
                 .setName("Enable Sub-git bridge")
                 .setDesc(
-                    "Allow the plugin to temporarily rename .git/HEAD and create a normal .git_metadata sidecar so nested repositories can be committed by the parent vault."
+                    "Allow the plugin to prepare nested repositories before committing them with the parent vault."
                 )
                 .addToggle((toggle) =>
                     toggle
@@ -90,16 +91,36 @@ export class ObsidianGitSettingsTab extends PluginSettingTab {
                         })
                 );
             new Setting(containerEl)
-                .setName("Bilingual button tooltips")
+                .setName("Metadata mode")
                 .setDesc(
-                    "Show Chinese translations in parentheses after the English button tooltip, for example: Push (推送)."
+                    "Exclusive rename keeps only one of .git or .git_metadata, but requires ChatGPT/Codex to release the .git directory. Sidecar copy keeps both directories and is more reliable on Windows."
                 )
-                .addToggle((toggle) =>
-                    toggle
-                        .setValue(plugin.settings.subGitBridgeBilingual)
+                .addDropdown((dropdown) =>
+                    dropdown
+                        .addOption("exclusive", "Exclusive rename (one folder)")
+                        .addOption("sidecar", "Sidecar copy (two folders)")
+                        .setValue(plugin.settings.subGitBridgeMetadataMode)
                         .onChange(async (value) => {
-                            plugin.settings.subGitBridgeBilingual = value;
+                            plugin.settings.subGitBridgeMetadataMode =
+                                value as ObsidianGitSettings["subGitBridgeMetadataMode"];
                             await plugin.saveSettings();
+                        })
+                );
+            new Setting(containerEl)
+                .setName("Language")
+                .setDesc(
+                    "English keeps the settings in English. 中文 translates the settings and adds Chinese translations to button tooltips."
+                )
+                .addDropdown((dropdown) =>
+                    dropdown
+                        .addOption("en", "English")
+                        .addOption("zh", "中文")
+                        .setValue(plugin.settings.subGitBridgeLanguage)
+                        .onChange(async (value) => {
+                            plugin.settings.subGitBridgeLanguage =
+                                value as ObsidianGitSettings["subGitBridgeLanguage"];
+                            await plugin.saveSettings();
+                            this.refreshDisplayWithDelay();
                         })
                 );
 
@@ -1090,25 +1111,19 @@ export class ObsidianGitSettingsTab extends PluginSettingTab {
         new Setting(containerEl)
             .setName("Donate")
             .setDesc(
-                "If you like this Plugin, consider donating to support continued development."
+                "If you like this Plugin, consider supporting the author on GitHub."
             )
             .addButton((bt) => {
+                const authorUrl =
+                    plugin.manifest.authorUrl || "https://github.com/zhu1j";
                 const link = bt.buttonEl.parentElement?.createEl("a", {
-                    href: "https://ko-fi.com/F1F195IQ5",
+                    href: authorUrl,
+                    text: "GitHub",
                     attr: {
                         target: "_blank",
                     },
                 });
                 if (link) {
-                    link.createEl("img", {
-                        attr: {
-                            height: "36",
-                            style: "border:0px;height:36px;",
-                            src: "https://cdn.ko-fi.com/cdn/kofi3.png?v=3",
-                            border: "0",
-                            alt: "Buy Me a Coffee at ko-fi.com",
-                        },
-                    });
                     bt.buttonEl.remove();
                 }
             });
@@ -1149,6 +1164,9 @@ export class ObsidianGitSettingsTab extends PluginSettingTab {
             } else {
                 keys.createEl("kbd", { text: "CTRL + SHIFT + I" });
             }
+        }
+        if (plugin.settings.subGitBridgeLanguage === "zh") {
+            translateSettingsDom(containerEl);
         }
     }
 

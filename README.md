@@ -8,16 +8,15 @@ A customized Git plugin for Obsidian that solves the problem of uploading or com
 
 -   Adds a **Sub-git scan** button to the Source Control toolbar, immediately to the left of **Commit-and-sync**.
 -   Scans the repository for child folders containing `.git`.
--   Reports live `.git`, metadata-only `.git_metadata`, and synchronized repositories in a notice.
--   Temporarily renames only `.git/HEAD` before **Commit all** and **Commit-and-sync**.
--   Copies the complete `.git` directory to a normal `.git_metadata` sidecar directory.
--   Restores `.git/HEAD` in a `finally` block after the Git operation.
--   Keeps `.git_metadata` as a normal tracked sidecar so parent-repository status remains clean.
+-   Supports **Exclusive rename** mode, which keeps only `.git` or `.git_metadata`.
+-   Supports **Sidecar copy** mode, which keeps both directories and avoids Windows directory-lock errors.
+-   Adds a **Git Subbridge** settings section with bridge, metadata-mode, and language options.
+-   **Language: 中文** translates the settings page and adds Chinese translations to button tooltips.
 -   Writes a recovery journal so interrupted operations can be restored on the next startup.
--   Adds a **Git Subbridge** settings section with an enable/disable switch.
--   Optional **Bilingual button tooltips** setting: English text followed by Chinese in parentheses.
 
 ## How it works
+
+In **Exclusive rename** mode, `.git` is renamed to `.git_metadata` before the commit and renamed back afterward. In **Sidecar copy** mode, only `.git/HEAD` is temporarily renamed, the metadata is copied to `.git_metadata`, and both directories remain.
 
 ```text
 Scan child .git

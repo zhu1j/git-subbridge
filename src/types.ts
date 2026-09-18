@@ -52,7 +52,8 @@ export interface ObsidianGitSettings {
     listChangedFilesInMessageBody: boolean;
     showStatusBar: boolean;
     subGitBridgeEnabled: boolean;
-    subGitBridgeBilingual: boolean;
+    subGitBridgeMetadataMode: "exclusive" | "sidecar";
+    subGitBridgeLanguage: "en" | "zh";
     updateSubmodules: boolean;
     submoduleRecurseCheckout: boolean;
     /**

@@ -8,16 +8,15 @@
 
 -   在源代码管理工具栏中增加 **子 Git 扫描** 按钮，位置就在 **Commit-and-sync** 左侧。
 -   扫描仓库中包含 `.git` 的子文件夹。
--   通过通知显示实时 `.git`、仅元数据 `.git_metadata` 和已同步的仓库。
--   执行 **Commit all** 或 **Commit-and-sync** 前，只临时改名 `.git/HEAD`。
--   将完整的 `.git` 目录复制为普通目录 `.git_metadata`。
--   Git 操作结束后，在 `finally` 中恢复 `.git/HEAD`。
--   `.git_metadata` 会作为普通旁路目录保留，确保父仓库状态干净。
+-   支持 **独占改名** 模式，只保留 `.git` 或 `.git_metadata` 中的一个。
+-   支持 **旁路副本** 模式，同时保留两个目录，避免 Windows 目录占用错误。
+-   增加 **Git Subbridge** 设置区域，可配置桥接、元数据模式和语言。
+-   **Language: 中文** 会翻译设置页，并在按钮提示中附加中文。
 -   写入恢复日志，插件启动时可以恢复中断的桥接操作。
--   增加 **Git Subbridge** 设置区域，可开启或关闭桥接功能。
--   可选的 **Bilingual button tooltips** 设置：在英文提示后显示中文括号翻译。
 
 ## 工作流程
+
+在 **独占改名** 模式下，提交前将 `.git` 改名为 `.git_metadata`，提交后再改回。在 **旁路副本** 模式下，只临时改名 `.git/HEAD`，将元数据复制到 `.git_metadata`，两个目录会同时保留。
 
 ```text
 扫描子 .git

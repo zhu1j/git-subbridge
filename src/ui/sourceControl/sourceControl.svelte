@@ -133,20 +133,21 @@
             const metadata = entries.filter(
                 (entry) => entry.state === "metadata"
             );
-            const synced = entries.filter((entry) => entry.state === "both");
-            subGitCount = live.length + metadata.length + synced.length;
-
-            if (entries.length === 0) {
-                new Notice("No child .git folders found in this repository.");
-                return;
-            }
-
+            const both = entries.filter((entry) => entry.state === "both");
+            const exclusiveMode =
+                plugin.settings.subGitBridgeMetadataMode === "exclusive";
+            const synced = exclusiveMode ? [] : both;
+            const conflicts = exclusiveMode ? both : [];
+            subGitCount = live.length + metadata.length + both.length;
             const details = [
                 live.length > 0 ? `${live.length} live .git` : undefined,
                 metadata.length > 0
                     ? `${metadata.length} .git_metadata`
                     : undefined,
                 synced.length > 0 ? `${synced.length} synced` : undefined,
+                conflicts.length > 0
+                    ? `${conflicts.length} conflict`
+                    : undefined,
             ]
                 .filter((value): value is string => value !== undefined)
                 .join(", ");
@@ -164,7 +165,7 @@
         }
     }
     function subGitLabel(english: string, chinese: string): string {
-        return plugin.settings.subGitBridgeBilingual
+        return plugin.settings.subGitBridgeLanguage === "zh"
             ? `${english} (${chinese})`
             : english;
     }
