@@ -1,7 +1,7 @@
 {
     "name": "git-subbridge",
-    "version": "1.0.0",
-    "description": "Adds a custom Git bridge for committing nested repositories in an Obsidian vault.",
+    "version": "1.0.1",
+    "description": "Adds a custom Git bridge for committing nested repositories in a vault.",
     "main": "main.js",
     "scripts": {
         "dev": "node esbuild.config.mjs dev",
