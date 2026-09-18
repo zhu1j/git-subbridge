@@ -1,7 +1,7 @@
 {
     "id": "git-subbridge",
     "name": "Git Subbridge",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "minAppVersion": "1.12.7",
     "description": "Adds a custom Git bridge for committing nested repositories in a vault.",
     "author": "一只朱",

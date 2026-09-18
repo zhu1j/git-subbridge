@@ -51,6 +51,8 @@ export interface ObsidianGitSettings {
     disablePopupsForNoChanges: boolean;
     listChangedFilesInMessageBody: boolean;
     showStatusBar: boolean;
+    subGitBridgeEnabled: boolean;
+    subGitBridgeBilingual: boolean;
     updateSubmodules: boolean;
     submoduleRecurseCheckout: boolean;
     /**

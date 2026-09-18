@@ -49,11 +49,12 @@
     let commitDisabled = $derived(!canCommit("smart"));
     let commitAndSyncDisabled = $derived(!canCommitAndSync("all"));
 
-    let commitActionDescription = $derived(getCommitActionDescription(false));
-    let commitAndSyncActionDescription = $derived(
-        getCommitActionDescription(true)
+    let commitActionDescription = $derived(
+        subGitLabel(getCommitActionDescription(false), "提交")
     );
-
+    let commitAndSyncActionDescription = $derived(
+        subGitLabel(getCommitActionDescription(true), "提交并同步")
+    );
     let showTree = $derived(plugin.settings.treeStructure);
     onMount(() => {
         view.registerEvent(
@@ -162,6 +163,12 @@
             new Notice(`Sub-git scan failed: ${message}`, 10000);
         }
     }
+    function subGitLabel(english: string, chinese: string): string {
+        return plugin.settings.subGitBridgeBilingual
+            ? `${english} (${chinese})`
+            : english;
+    }
+
     function getCommitActionDescription(sync: boolean): string {
         const suffix = sync ? " and sync" : "";
         if (hasConflicts) {
@@ -252,14 +259,14 @@
         const menu = Menu.forEvent(event);
         menu.addItem((item) =>
             item
-                .setTitle("Commit staged")
+                .setTitle(subGitLabel("Commit staged", "提交已暂存内容"))
                 .setIcon("git-commit")
                 .setDisabled(!canCommit("staged"))
                 .onClick(() => commit("staged"))
         );
         menu.addItem((item) =>
             item
-                .setTitle("Stage all and commit")
+                .setTitle(subGitLabel("Stage all and commit", "暂存全部并提交"))
                 .setIcon("list-plus")
                 .setDisabled(!canCommit("all"))
                 .onClick(() => commit("all"))
@@ -267,7 +274,7 @@
         if (Platform.isDesktopApp) {
             menu.addItem((item) =>
                 item
-                    .setTitle("Amend staged")
+                    .setTitle(subGitLabel("Amend staged", "修改已暂存提交"))
                     .setIcon("git-commit")
                     .setDisabled(!canCommit("staged"))
                     .onClick(amendStaged)
@@ -276,7 +283,12 @@
         menu.addSeparator();
         menu.addItem((item) =>
             item
-                .setTitle("Commit staged and sync")
+                .setTitle(
+                    subGitLabel(
+                        "Commit staged and sync",
+                        "提交已暂存内容并同步"
+                    )
+                )
                 .setIcon("arrow-up-circle")
                 .setDisabled(!canCommit("staged"))
                 .onClick(() => commitAndSync("staged"))
@@ -386,7 +398,10 @@
                 id="subgit-scan"
                 data-icon="git-fork"
                 class="clickable-icon nav-action-button"
-                aria-label="Scan nested .git folders"
+                aria-label={subGitLabel(
+                    "Scan nested .git folders",
+                    "扫描子 .git 文件夹"
+                )}
                 bind:this={buttons[11]}
                 onclick={scanSubGit}
             ></div>
@@ -415,7 +430,10 @@
                     id="commit-menu"
                     data-icon="chevron-down"
                     class="clickable-icon nav-action-button"
-                    aria-label="More commit actions"
+                    aria-label={subGitLabel(
+                        "More commit actions",
+                        "更多提交操作"
+                    )}
                     bind:this={buttons[10]}
                     onclick={showCommitMenu}
                 ></div>
@@ -424,7 +442,7 @@
                 id="stage-all"
                 class="clickable-icon nav-action-button"
                 data-icon="plus-circle"
-                aria-label="Stage all"
+                aria-label={subGitLabel("Stage all", "暂存全部")}
                 bind:this={buttons[2]}
                 onclick={stageAll}
             ></div>
@@ -432,7 +450,7 @@
                 id="unstage-all"
                 class="clickable-icon nav-action-button"
                 data-icon="minus-circle"
-                aria-label="Unstage all"
+                aria-label={subGitLabel("Unstage all", "取消暂存全部")}
                 bind:this={buttons[3]}
                 onclick={unstageAll}
             ></div>
@@ -440,7 +458,7 @@
                 id="push"
                 class="clickable-icon nav-action-button"
                 data-icon="upload"
-                aria-label="Push"
+                aria-label={subGitLabel("Push", "推送")}
                 bind:this={buttons[4]}
                 onclick={push}
             ></div>
@@ -448,14 +466,14 @@
                 id="pull"
                 class="clickable-icon nav-action-button"
                 data-icon="download"
-                aria-label="Pull"
+                aria-label={subGitLabel("Pull", "拉取")}
                 bind:this={buttons[5]}
                 onclick={pull}
             ></div>
             <div
                 id="layoutChange"
                 class="clickable-icon nav-action-button"
-                aria-label="Change Layout"
+                aria-label={subGitLabel("Change Layout", "切换布局")}
                 data-icon={showTree ? "list" : "folder"}
                 bind:this={buttons[6]}
                 onclick={() => {
@@ -470,7 +488,7 @@
                 class="clickable-icon nav-action-button"
                 class:loading
                 data-icon="refresh-cw"
-                aria-label="Refresh"
+                aria-label={subGitLabel("Refresh", "刷新")}
                 bind:this={buttons[7]}
                 onclick={triggerRefresh}
             ></div>

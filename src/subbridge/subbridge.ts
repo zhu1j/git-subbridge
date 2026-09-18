@@ -87,6 +87,8 @@ export class SubGitBridge {
     }
 
     async run<T>(operation: () => Promise<T>): Promise<T> {
+        if (this.plugin.settings?.subGitBridgeEnabled === false)
+            return operation();
         if (!Platform.isDesktopApp) return operation();
         if (this.transactionDepth > 0) return operation();
 

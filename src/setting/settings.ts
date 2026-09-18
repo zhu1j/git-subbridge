@@ -75,6 +75,34 @@ export class ObsidianGitSettingsTab extends PluginSettingTab {
 
         let setting: Setting;
         if (gitReady) {
+            new Setting(containerEl).setName("Git Subbridge").setHeading();
+            new Setting(containerEl)
+                .setName("Enable Sub-git bridge")
+                .setDesc(
+                    "Allow the plugin to temporarily rename .git/HEAD and create a normal .git_metadata sidecar so nested repositories can be committed by the parent vault."
+                )
+                .addToggle((toggle) =>
+                    toggle
+                        .setValue(plugin.settings.subGitBridgeEnabled)
+                        .onChange(async (value) => {
+                            plugin.settings.subGitBridgeEnabled = value;
+                            await plugin.saveSettings();
+                        })
+                );
+            new Setting(containerEl)
+                .setName("Bilingual button tooltips")
+                .setDesc(
+                    "Show Chinese translations in parentheses after the English button tooltip, for example: Push (推送)."
+                )
+                .addToggle((toggle) =>
+                    toggle
+                        .setValue(plugin.settings.subGitBridgeBilingual)
+                        .onChange(async (value) => {
+                            plugin.settings.subGitBridgeBilingual = value;
+                            await plugin.saveSettings();
+                        })
+                );
+
             new Setting(containerEl).setName("Automatic").setHeading();
             new Setting(containerEl)
                 .setName("Split timers for automatic commit and sync")

@@ -14,6 +14,8 @@
 -   Git 操作结束后，在 `finally` 中恢复 `.git/HEAD`。
 -   `.git_metadata` 会作为普通旁路目录保留，确保父仓库状态干净。
 -   写入恢复日志，插件启动时可以恢复中断的桥接操作。
+-   增加 **Git Subbridge** 设置区域，可开启或关闭桥接功能。
+-   可选的 **Bilingual button tooltips** 设置：在英文提示后显示中文括号翻译。
 
 ## 工作流程
 

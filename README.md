@@ -14,6 +14,8 @@ A customized Git plugin for Obsidian that solves the problem of uploading or com
 -   Restores `.git/HEAD` in a `finally` block after the Git operation.
 -   Keeps `.git_metadata` as a normal tracked sidecar so parent-repository status remains clean.
 -   Writes a recovery journal so interrupted operations can be restored on the next startup.
+-   Adds a **Git Subbridge** settings section with an enable/disable switch.
+-   Optional **Bilingual button tooltips** setting: English text followed by Chinese in parentheses.
 
 ## How it works
 
