@@ -1,0 +1,9 @@
+# Default owner for repository changes.
+* @zhu1j
+
+# Protect release and security-sensitive configuration.
+/.github/ @zhu1j
+/manifest.json @zhu1j
+/versions.json @zhu1j
+/src/subbridge/ @zhu1j
+/SECURITY.md @zhu1j
