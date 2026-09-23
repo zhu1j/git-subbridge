@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.0.7](https://github.com/zhu1j/git-subbridge/compare/1.0.6...1.0.7) (2026-09-23)
+
+### Bug Fixes
+
+* rename the settings heading to satisfy Obsidian review checks.
+
 ## [2.40.0](https://github.com/Vinzent03/obsidian-git/compare/2.39.0...2.40.0) (2026-09-17)
 
 

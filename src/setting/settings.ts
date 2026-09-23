@@ -76,7 +76,9 @@ export class ObsidianGitSettingsTab extends PluginSettingTab {
 
         let setting: Setting;
         if (gitReady) {
-            new Setting(containerEl).setName("Git Subbridge").setHeading();
+            new Setting(containerEl)
+                .setName("Nested repositories")
+                .setHeading();
             new Setting(containerEl)
                 .setName("Enable Sub-git bridge")
                 .setDesc(

@@ -10,7 +10,7 @@ A customized Git plugin for Obsidian that solves the problem of uploading or com
 -   Scans the repository for child folders containing `.git`.
 -   Supports **Exclusive rename** mode, which keeps only `.git` or `.git_metadata`.
 -   Supports **Sidecar copy** mode, which keeps both directories and avoids Windows directory-lock errors.
--   Adds a **Git Subbridge** settings section with bridge, metadata-mode, and language options.
+-   Adds a **Nested repositories** settings section with bridge, metadata-mode, and language options.
 -   **Language: 中文** translates the settings page and adds Chinese translations to button tooltips.
 -   Writes a recovery journal so interrupted operations can be restored on the next startup.
 

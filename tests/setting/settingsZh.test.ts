@@ -6,6 +6,7 @@ describe("settings Chinese translations", () => {
         expect(translateSettingsText("Automatic")).toBe("自动");
         expect(translateSettingsText("Metadata mode")).toBe("元数据模式");
         expect(translateSettingsText("Language")).toBe("语言");
+        expect(translateSettingsText("Nested repositories")).toBe("嵌套仓库");
     });
 
     test("translates dynamic setting descriptions", () => {

@@ -1,5 +1,5 @@
 const translations: Record<string, string> = {
-    "Git Subbridge": "Git Subbridge",
+    "Nested repositories": "嵌套仓库",
     Automatic: "自动",
     "Split timers for automatic commit and sync": "拆分自动提交与同步计时器",
     "Auto commit after latest commit": "最近一次提交后的自动提交",
