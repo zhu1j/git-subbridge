@@ -9,6 +9,19 @@ import { SimpleGit } from "./gitManager/simpleGit";
 import { getNewLeaf, splitRemoteBranch } from "./utils";
 import { GeneralModal } from "./ui/modals/generalModal";
 import type { DiffViewState } from "./types";
+export function isGitHubRemote(remoteUrl: string | undefined): boolean {
+    if (!remoteUrl) return false;
+
+    const value = remoteUrl.trim();
+    try {
+        return new URL(value).hostname.toLowerCase() === "github.com";
+    } catch {
+        // Git also supports scp-like remotes such as git@github.com:owner/repo.
+    }
+
+    const scpLike = value.match(/^(?:[^@\s]+@)?([^:/\s]+):(?!\/\/)/);
+    return scpLike?.[1]?.toLowerCase() === "github.com";
+}
 
 export default class Tools {
     constructor(private readonly plugin: ObsidianGit) {}
@@ -26,7 +39,7 @@ export default class Tools {
         const remoteUrl = await this.plugin.gitManager.getRemoteUrl(remote);
 
         //Check for files >100mb on GitHub remote
-        if (remoteUrl?.includes("github.com")) {
+        if (isGitHubRemote(remoteUrl)) {
             const tooBigFiles = [];
 
             const gitManager = this.plugin.gitManager;
